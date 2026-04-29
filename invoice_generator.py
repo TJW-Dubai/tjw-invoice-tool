@@ -7,12 +7,18 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from typing import Optional, Tuple
 import json
 import os
 from datetime import datetime
 from num2words import num2words
-import arabic_reshaper
-from bidi.algorithm import get_display
+
+try:
+    import arabic_reshaper
+    from bidi.algorithm import get_display
+    _ARABIC_AVAILABLE = True
+except ImportError:
+    _ARABIC_AVAILABLE = False
 
 COMPANY_NAME   = "Career Catalyst Venture LLC"
 TAX_REG        = "104888097300001"
@@ -35,11 +41,14 @@ NOTE_BG     = colors.HexColor('#FFF8E1')
 NOTE_BORDER = colors.HexColor('#FFB300')
 NOTE_TEXT   = colors.HexColor('#4E3200')
 
-# Register Arabic-capable font from Windows
+# Register Arabic-capable font — try Windows first, then Linux paths
 _ARABIC_FONT = 'Helvetica'
 for _fp, _fn in [
-    (r'C:\Windows\Fonts\tahoma.ttf',  'Tahoma'),
-    (r'C:\Windows\Fonts\arial.ttf',   'Arial'),
+    (r'C:\Windows\Fonts\tahoma.ttf',                              'Tahoma'),
+    (r'C:\Windows\Fonts\arial.ttf',                               'Arial'),
+    ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',           'DejaVuSans'),
+    ('/usr/share/fonts/truetype/freefont/FreeSans.ttf',           'FreeSans'),
+    ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', 'LiberationSans'),
 ]:
     if os.path.exists(_fp):
         try:
@@ -72,21 +81,23 @@ def _to_words(amount: float) -> str:
     frac  = round((amount - whole) * 100)
     w = num2words(whole).replace(',', '').title()
     if frac:
-        return f"AED {w} and {num2words(frac).title()} Fils Only"
-    return f"AED {w} Only"
+        return "AED " + w + " and " + num2words(frac).title() + " Fils Only"
+    return "AED " + w + " Only"
 
 
 def _to_arabic_words(amount: float) -> str:
+    if not _ARABIC_AVAILABLE:
+        return ""
     try:
         whole = int(amount)
-        ar = num2words(whole, lang='ar')
-        full = f"{ar} درهم إماراتي فقط"
+        ar    = num2words(whole, lang='ar')
+        full  = ar + " درهم إماراتي فقط"
         return get_display(arabic_reshaper.reshape(full))
     except Exception:
         return ""
 
 
-def _draw_label_value(c, x, y, label: str, value: str,
+def _draw_label_value(c, x, y, label, value,
                       label_font='Helvetica-Bold', value_font='Helvetica', size=10):
     c.setFont(label_font, size)
     c.setFillColor(colors.black)
@@ -97,39 +108,43 @@ def _draw_label_value(c, x, y, label: str, value: str,
 
 
 def generate_invoice(
-    name: str,
-    email: str,
-    program: int,
-    amount: float,
-    balance_due: str = 'NA',
-    terms: str = 'NA',
-    due_date: str = 'NA',
-    payment_method: int = 1,
-    foreign_amount: float | None = None,
-    custom_invoice_number: str | None = None,
-    invoice_date: str | None = None,
-    output_dir: str | None = None,
-) -> tuple[str, str]:
-
+    name,
+    email,
+    program,
+    amount,
+    balance_due='NA',
+    terms='NA',
+    due_date='NA',
+    payment_method=1,
+    foreign_amount=None,
+    custom_invoice_number=None,
+    invoice_date=None,
+    output_dir=None,
+):
     if output_dir is None:
         output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'invoices')
     os.makedirs(output_dir, exist_ok=True)
 
-    inv_no   = custom_invoice_number.strip() if custom_invoice_number and custom_invoice_number.strip() else _next_invoice_number()
-    date_str = invoice_date.strip() if invoice_date and invoice_date.strip() else datetime.now().strftime("%d %B %Y")
-    fmt_amt  = f"{amount:,.0f}"
+    inv_no   = (custom_invoice_number.strip()
+                if custom_invoice_number and custom_invoice_number.strip()
+                else _next_invoice_number())
+    date_str = (invoice_date.strip()
+                if invoice_date and invoice_date.strip()
+                else datetime.now().strftime("%d %B %Y"))
+    fmt_amt  = "{:,.0f}".format(amount)
     words_en = _to_words(amount)
     words_ar = _to_arabic_words(amount)
 
     safe     = "".join(ch for ch in name if ch.isalnum() or ch == ' ').strip().replace(' ', '_')
-    filepath = os.path.join(output_dir, f"Invoice_{inv_no.replace('/', '_')}_{safe}.pdf")
+    filepath = os.path.join(output_dir,
+                            "Invoice_" + inv_no.replace('/', '_') + "_" + safe + ".pdf")
 
     c = rl_canvas.Canvas(filepath, pagesize=A4)
     W, H = A4
     LM = 15 * mm
     RM = W - 15 * mm
 
-    # ── Header band ──────────────────────────────────────────
+    # Header band
     HDR_H = 38 * mm
     c.setFillColor(NAVY)
     c.rect(0, H - HDR_H, W, HDR_H, fill=1, stroke=0)
@@ -138,7 +153,7 @@ def generate_invoice(
     c.setFont('Helvetica-Bold', 15)
     c.drawString(LM, H - 10 * mm, COMPANY_NAME)
     c.setFont('Helvetica', 9)
-    c.drawString(LM, H - 17 * mm, f"Corporate Tax Registration Number : {TAX_REG}")
+    c.drawString(LM, H - 17 * mm, "Corporate Tax Registration Number : " + TAX_REG)
     c.drawString(LM, H - 23 * mm, WEBSITE)
     c.drawString(LM, H - 29 * mm, ADDRESS_L1)
     c.drawString(LM, H - 35 * mm, ADDRESS_L2)
@@ -146,7 +161,7 @@ def generate_invoice(
     c.setFont('Helvetica-Bold', 32)
     c.drawRightString(RM, H - 22 * mm, "INVOICE")
 
-    # ── Invoice meta (right side) ─────────────────────────────
+    # Invoice meta (right side)
     c.setFillColor(colors.black)
     mx = 118 * mm
     my = H - 46 * mm
@@ -163,14 +178,14 @@ def generate_invoice(
         c.drawRightString(RM, my, value)
         my -= 7.5 * mm
 
-    # ── Bill To ───────────────────────────────────────────────
+    # Bill To
     bty = H - 90 * mm
     c.setFillColor(NAVY)
     c.setFont('Helvetica-Bold', 11)
     c.drawString(LM, bty, "Bill To :")
 
     c.setFillColor(colors.black)
-    _draw_label_value(c, LM, bty - 9 * mm,  "Name :   ", name,  size=10)
+    _draw_label_value(c, LM, bty - 9 * mm,  "Name :   ",     name,  size=10)
     _draw_label_value(c, LM, bty - 17 * mm, "Email ID :   ", email, size=10)
 
     rule_y = bty - 22 * mm
@@ -178,7 +193,7 @@ def generate_invoice(
     c.setLineWidth(0.5)
     c.line(LM, rule_y, RM, rule_y)
 
-    # ── Line-item table ───────────────────────────────────────
+    # Line-item table
     ph = ParagraphStyle('h', fontName='Helvetica-Bold', fontSize=9,
                         textColor=colors.white, alignment=TA_CENTER, leading=12)
     pb = ParagraphStyle('b', fontName='Helvetica', fontSize=9,
@@ -224,13 +239,13 @@ def generate_invoice(
     tbl_w, tbl_h = tbl.wrapOn(c, sum(col_w), H)
     tbl.drawOn(c, LM, tbl_top - tbl_h)
 
-    # ── Amount in words (English + Arabic) + Total ───────────
+    # Amount in words (English + Arabic) + Total
     aw_y = tbl_top - tbl_h - 9 * mm
     c.setFont('Helvetica-Oblique', 9)
     c.setFillColor(colors.black)
-    c.drawString(LM, aw_y, f"(Amount in words: {words_en})")
+    c.drawString(LM, aw_y, "(Amount in words: " + words_en + ")")
     c.setFont('Helvetica-Bold', 11)
-    c.drawRightString(RM, aw_y, f"Total AED   {fmt_amt}")
+    c.drawRightString(RM, aw_y, "Total AED   " + fmt_amt)
 
     next_y = aw_y - 7 * mm
     if words_ar:
@@ -239,39 +254,39 @@ def generate_invoice(
         c.drawRightString(RM, next_y, words_ar)
         next_y -= 7 * mm
 
-    # ── Payment note box ─────────────────────────────────────
+    # Payment note box
     if payment_method in (2, 3) and foreign_amount is not None:
-        currency = "USD" if payment_method == 2 else "INR"
-        method   = "PayPal" if payment_method == 2 else "Google Pay"
-        fmt_foreign = f"{foreign_amount:,.0f}"
-        note_line1 = "Payment Note"
-        note_line2 = (f"An amount of {currency} {fmt_foreign} was received via {method}, "
-                      f"equivalent to AED {fmt_amt}.")
+        currency    = "USD" if payment_method == 2 else "INR"
+        method      = "PayPal" if payment_method == 2 else "Google Pay"
+        fmt_foreign = "{:,.0f}".format(foreign_amount)
+        note_line2  = ("An amount of " + currency + " " + fmt_foreign +
+                       " was received via " + method +
+                       ", equivalent to AED " + fmt_amt + ".")
 
-        box_top  = next_y - 4 * mm
-        box_h    = 18 * mm
-        box_x    = LM
-        box_w    = RM - LM
+        box_top = next_y - 4 * mm
+        box_h   = 18 * mm
+        box_w   = RM - LM
 
         c.setFillColor(NOTE_BG)
         c.setStrokeColor(NOTE_BORDER)
         c.setLineWidth(1)
-        c.roundRect(box_x, box_top - box_h, box_w, box_h, 4, fill=1, stroke=1)
+        c.roundRect(LM, box_top - box_h, box_w, box_h, 4, fill=1, stroke=1)
 
         c.setFillColor(NOTE_TEXT)
         c.setFont('Helvetica-Bold', 10)
-        c.drawString(box_x + 5 * mm, box_top - 6 * mm, note_line1)
+        c.drawString(LM + 5 * mm, box_top - 6 * mm,  "Payment Note")
         c.setFont('Helvetica', 9)
-        c.drawString(box_x + 5 * mm, box_top - 13 * mm, note_line2)
+        c.drawString(LM + 5 * mm, box_top - 13 * mm, note_line2)
 
-    # ── Footer band ───────────────────────────────────────────
+    # Footer band
     c.setFillColor(NAVY)
     c.rect(0, 0, W, 14 * mm, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.setFont('Helvetica', 8)
     c.drawCentredString(
         W / 2, 5 * mm,
-        f"{COMPANY_NAME}   Licence No. {LICENCE_NO}   {ADDRESS_L1} {ADDRESS_L2}"
+        COMPANY_NAME + "   Licence No. " + LICENCE_NO +
+        "   " + ADDRESS_L1 + " " + ADDRESS_L2
     )
 
     c.save()

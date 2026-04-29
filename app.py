@@ -1,7 +1,8 @@
-import io
+﻿import io
 import os
 import csv
 import zipfile
+from typing import Optional
 from datetime import datetime
 from flask import Flask, render_template, request, send_file, jsonify
 from invoice_generator import generate_invoice, INVOICE_PREFIX
@@ -21,7 +22,7 @@ SAMPLE_CSV_ROWS = [
 ]
 
 
-def _parse_float(val: str) -> float | None:
+def _parse_float(val: str) -> Optional[float]:
     val = (val or '').strip().replace(',', '')
     try:
         return float(val) if val else None
@@ -179,3 +180,4 @@ def sample_csv():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+

@@ -1,5 +1,6 @@
-import os
+﻿import os
 import smtplib
+from typing import Optional
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
@@ -21,7 +22,7 @@ def send_onboarding_email(
     invoice_number: str,
     amount: float,
     payment_method: int = 1,
-    foreign_amount: float | None = None,
+    foreign_amount: Optional[float] = None,
 ) -> None:
     app_password = os.environ.get('GMAIL_APP_PASSWORD')
     if not app_password:
@@ -53,7 +54,7 @@ def send_onboarding_email(
     msg = MIMEMultipart('alternative')
     msg['From']    = f"The Job Workshop <{SENDER}>"
     msg['To']      = recipient_email
-    msg['Subject'] = f"Welcome to The Job Workshop – Invoice {invoice_number}"
+    msg['Subject'] = f"Welcome to The Job Workshop â€“ Invoice {invoice_number}"
 
     plain = f"""\
 Dear {recipient_name},
@@ -147,3 +148,4 @@ Al Messaned, Sharjah, UAE
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
         server.login(SENDER, app_password)
         server.sendmail(SENDER, recipient_email, msg.as_string())
+
