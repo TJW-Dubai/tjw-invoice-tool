@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload – The Job Workshop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Bulk Invoice Upload</h1>
+  <p class="page-sub">Upload a CSV to generate multiple invoices at once. All PDFs download as a ZIP.</p>
+</div>
+
+<div class="card">
+  <div class="section-label">Upload CSV File</div>
+
+  <div class="alert alert-info" style="margin-bottom:20px;">
+    Use this for both new invoices and re-generating previous ones in the new format.
+    Include <strong>Invoice Number</strong> and <strong>Invoice Date</strong> columns for historical records.
+  </div>
+
+  <form action="/bulk/upload" method="POST" enctype="multipart/form-data" id="bulkForm">
+    <div class="form-group" style="max-width: 480px; margin-bottom: 24px;">
+      <label>CSV File <span class="req">*</span></label>
+      <input type="file" name="csv_file" accept=".csv" required id="csvFileInput">
+      <span class="field-hint">UTF-8 encoded .csv file</span>
+    </div>
+
+    <div id="filePreview" class="file-preview hidden">
+      <span id="filePreviewName"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="bulkBtn" style="max-width: 360px;">
+      <span id="bulkBtnText">Generate All Invoices &amp; Download ZIP</span>
+      <span id="bulkSpinner" class="hidden">Generating…</span>
+    </button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="section-label">CSV Format Guide</div>
+  <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+    Column names must match exactly (case-sensitive). Download the template below to get started.
+  </p>
+
+  <table class="csv-table">
+    <thead>
+      <tr>
+        <th>Column Name</th>
+        <th>Required?</th>
+        <th>Example</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Name</strong></td>
+        <td><span class="badge badge-req">Required</span></td>
+        <td>Arindam Sengupta</td>
+        <td>Customer full name</td>
+      </tr>
+      <tr>
+        <td><strong>Email</strong></td>
+        <td><span class="badge badge-req">Required</span></td>
+        <td>customer@email.com</td>
+        <td>Customer email address</td>
+      </tr>
+      <tr>
+        <td><strong>Program</strong></td>
+        <td><span class="badge badge-req">Required</span></td>
+        <td>1</td>
+        <td>1 = Interview Assurance &nbsp;|&nbsp; 2 = Comprehensive</td>
+      </tr>
+      <tr>
+        <td><strong>Amount</strong></td>
+        <td><span class="badge badge-req">Required</span></td>
+        <td>1800</td>
+        <td>Amount in AED — numbers only, no commas</td>
+      </tr>
+      <tr>
+        <td><strong>Invoice Number</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>TJW/2026/03/001</td>
+        <td>For historical invoices. Leave blank to auto-generate.</td>
+      </tr>
+      <tr>
+        <td><strong>Invoice Date</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>15 March 2026</td>
+        <td>For historical invoices. Leave blank for today's date.</td>
+      </tr>
+      <tr>
+        <td><strong>Balance Due</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>AED 900</td>
+        <td>Leave blank for NA</td>
+      </tr>
+      <tr>
+        <td><strong>Terms</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>Net 30</td>
+        <td>Leave blank for NA</td>
+      </tr>
+      <tr>
+        <td><strong>Due Date</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>30 May 2026</td>
+        <td>Leave blank for NA</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Method</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>2</td>
+        <td>1 = AED &nbsp;|&nbsp; 2 = USD PayPal &nbsp;|&nbsp; 3 = INR Google Pay. Default: 1</td>
+      </tr>
+      <tr>
+        <td><strong>Foreign Amount</strong></td>
+        <td><span class="badge badge-opt">Optional</span></td>
+        <td>490</td>
+        <td>Required if Payment Method is 2 or 3</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 20px;">
+    <a href="/sample-csv" class="download-template-link">
+      ↓ Download CSV Template
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('csvFileInput').addEventListener('change', function () {
+    const preview  = document.getElementById('filePreview');
+    const nameSpan = document.getElementById('filePreviewName');
+    if (this.files.length > 0) {
+      nameSpan.textContent = '📄 ' + this.files[0].name;
+      preview.classList.remove('hidden');
+    } else {
+      preview.classList.add('hidden');
+    }
+  });
+
+  document.getElementById('bulkForm').addEventListener('submit', function () {
+    const btn     = document.getElementById('bulkBtn');
+    const text    = document.getElementById('bulkBtnText');
+    const spinner = document.getElementById('bulkSpinner');
+    btn.disabled  = true;
+    text.classList.add('hidden');
+    spinner.classList.remove('hidden');
+  });
+</script>
+{% endblock %}

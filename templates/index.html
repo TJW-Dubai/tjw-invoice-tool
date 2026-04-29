@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Generate Invoice – The Job Workshop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Generate Invoice</h1>
+  <p class="page-sub">Fill in the customer details below. The invoice PDF will download automatically.</p>
+</div>
+
+<div id="formAlert" class="alert hidden"></div>
+
+<div class="card">
+  <form id="invoiceForm" novalidate>
+    <div class="section-label">Customer Details</div>
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Customer Name <span class="req">*</span></label>
+        <input type="text" name="name" required placeholder="e.g. Arindam Sengupta" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label>Customer Email <span class="req">*</span></label>
+        <input type="email" name="email" required placeholder="e.g. customer@email.com" autocomplete="off">
+      </div>
+
+      <div class="form-group full">
+        <label>Program <span class="req">*</span></label>
+        <select name="program" required>
+          <option value="">— Select a program —</option>
+          <option value="1">1 · Five Modules Advisory Program (Interview Assurance Program)</option>
+          <option value="2">2 · Comprehensive End to End Job Search Management and Advisory</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="section-label" style="margin-top:24px;">Invoice Details</div>
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Amount <span class="req">*</span> <span class="opt">AED</span></label>
+        <input type="text" name="amount" required placeholder="e.g. 1800">
+      </div>
+
+      <div class="form-group">
+        <label>Invoice Number <span class="req">*</span> <span class="opt">auto-suggested, editable</span></label>
+        <input type="text" name="invoice_number" required
+               value="{{ suggested_invoice_no }}"
+               placeholder="e.g. TJW/2026/04/042">
+      </div>
+
+      <div class="form-group">
+        <label>Balance Due <span class="opt">optional</span></label>
+        <input type="text" name="balance_due" placeholder="e.g. AED 900  (leave blank for NA)">
+      </div>
+
+      <div class="form-group">
+        <label>Terms <span class="opt">optional</span></label>
+        <input type="text" name="terms" placeholder="e.g. Net 30  (leave blank for NA)">
+      </div>
+
+      <div class="form-group">
+        <label>Due Date <span class="opt">optional</span></label>
+        <input type="text" name="due_date" placeholder="e.g. 30 May 2026  (leave blank for NA)">
+      </div>
+
+    </div>
+
+    <div class="section-label" style="margin-top:24px;">Payment Method <span class="req">*</span></div>
+    <div class="radio-group" id="paymentMethodGroup">
+      <label class="radio-option">
+        <input type="radio" name="payment_method" value="1" checked>
+        <span class="radio-icon">🏦</span>
+        <span>AED Direct</span>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="payment_method" value="2">
+        <span class="radio-icon">💳</span>
+        <span>USD via PayPal</span>
+      </label>
+      <label class="radio-option">
+        <input type="radio" name="payment_method" value="3">
+        <span class="radio-icon">📱</span>
+        <span>INR via Google Pay</span>
+      </label>
+    </div>
+
+    <div class="form-group hidden" id="foreignAmountGroup" style="margin-top:16px; max-width:320px;">
+      <label id="foreignAmountLabel">Amount Paid <span class="req">*</span></label>
+      <input type="text" name="foreign_amount" id="foreignAmountInput" placeholder="e.g. 490">
+    </div>
+
+    <div style="margin-top:32px;">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span id="btnText">Generate &amp; Download Invoice</span>
+        <span id="btnSpinner" class="spinner hidden">Generating…</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show/hide foreign amount field
+  document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    radio.addEventListener('change', updateForeignField);
+  });
+
+  function updateForeignField() {
+    const method = document.querySelector('input[name="payment_method"]:checked').value;
+    const group  = document.getElementById('foreignAmountGroup');
+    const label  = document.getElementById('foreignAmountLabel');
+    const input  = document.getElementById('foreignAmountInput');
+
+    if (method === '2') {
+      group.classList.remove('hidden');
+      label.innerHTML = 'Amount Paid in USD <span class="req">*</span>';
+      input.placeholder = 'e.g. 490';
+      input.required = true;
+    } else if (method === '3') {
+      group.classList.remove('hidden');
+      label.innerHTML = 'Amount Paid in INR <span class="req">*</span>';
+      input.placeholder = 'e.g. 40500';
+      input.required = true;
+    } else {
+      group.classList.add('hidden');
+      input.required = false;
+      input.value = '';
+    }
+  }
+
+  // Form submit via fetch → blob download
+  document.getElementById('invoiceForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!this.checkValidity()) { this.reportValidity(); return; }
+
+    const btn     = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    btn.disabled  = true;
+    btnText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    hideAlert();
+
+    try {
+      const resp = await fetch('/generate', { method: 'POST', body: new FormData(this) });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error || 'Server error');
+      }
+
+      const disposition = resp.headers.get('Content-Disposition') || '';
+      let filename = 'invoice.pdf';
+      const match = disposition.match(/filename[^;=\n]*=([^;\n]*)/);
+      if (match) filename = match[1].trim().replace(/['"]/g, '');
+
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+
+      showAlert('Invoice generated and downloaded successfully.', 'success');
+    } catch (err) {
+      showAlert('Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btnText.classList.remove('hidden');
+      spinner.classList.add('hidden');
+    }
+  });
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('formAlert');
+    el.textContent = msg;
+    el.className = `alert alert-${type}`;
+    el.classList.remove('hidden');
+    if (type === 'success') setTimeout(hideAlert, 6000);
+  }
+  function hideAlert() {
+    const el = document.getElementById('formAlert');
+    el.classList.add('hidden');
+  }
+</script>
+{% endblock %}
