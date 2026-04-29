@@ -141,13 +141,15 @@ def bulk_upload():
                 custom_inv_no  = row.get('Invoice Number', '').strip() or None
                 inv_date       = row.get('Invoice Date', '').strip() or None
 
-                path, inv_no = generate_invoice(
+                # Generate entirely in memory — no disk writes, no cleanup needed
+                pdf_bytes, filename, inv_no = generate_invoice(
                     name=name, email=email, program=program, amount=amount,
                     balance_due=balance_due, terms=terms, due_date=due_date,
                     payment_method=payment_method, foreign_amount=foreign_amount,
                     custom_invoice_number=custom_inv_no, invoice_date=inv_date,
+                    return_bytes=True,
                 )
-                zf.write(path, os.path.basename(path))
+                zf.writestr(filename, pdf_bytes)
                 count += 1
 
             except Exception as e:

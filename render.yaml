@@ -2,7 +2,7 @@ services:
   - type: web
     name: tjw-invoice-tool
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: "apt-get install -y fonts-noto 2>/dev/null || true && pip install -r requirements.txt"
     startCommand: gunicorn app:app --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION

@@ -41,14 +41,16 @@ NOTE_BG     = colors.HexColor('#FFF8E1')
 NOTE_BORDER = colors.HexColor('#FFB300')
 NOTE_TEXT   = colors.HexColor('#4E3200')
 
-# Register Arabic-capable font — try Windows first, then Linux paths
+# Register Arabic-capable font — try Windows first, then Linux/Render paths
 _ARABIC_FONT = 'Helvetica'
 for _fp, _fn in [
-    (r'C:\Windows\Fonts\tahoma.ttf',                              'Tahoma'),
-    (r'C:\Windows\Fonts\arial.ttf',                               'Arial'),
-    ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',           'DejaVuSans'),
-    ('/usr/share/fonts/truetype/freefont/FreeSans.ttf',           'FreeSans'),
-    ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', 'LiberationSans'),
+    (r'C:\Windows\Fonts\tahoma.ttf',                                          'Tahoma'),
+    (r'C:\Windows\Fonts\arial.ttf',                                            'Arial'),
+    ('/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf',            'NotoArabic'),
+    ('/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf',             'NotoArabic'),
+    ('/usr/share/fonts/opentype/noto/NotoNaskhArabic-Regular.ttf',            'NotoArabic'),
+    ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',                       'DejaVuSans'),
+    ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',       'LiberationSans'),
 ]:
     if os.path.exists(_fp):
         try:
@@ -120,10 +122,9 @@ def generate_invoice(
     custom_invoice_number=None,
     invoice_date=None,
     output_dir=None,
+    return_bytes=False,
 ):
-    if output_dir is None:
-        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'invoices')
-    os.makedirs(output_dir, exist_ok=True)
+    import io as _io
 
     inv_no   = (custom_invoice_number.strip()
                 if custom_invoice_number and custom_invoice_number.strip()
@@ -135,11 +136,12 @@ def generate_invoice(
     words_en = _to_words(amount)
     words_ar = _to_arabic_words(amount)
 
-    safe     = "".join(ch for ch in name if ch.isalnum() or ch == ' ').strip().replace(' ', '_')
-    filepath = os.path.join(output_dir,
-                            "Invoice_" + inv_no.replace('/', '_') + "_" + safe + ".pdf")
+    safe      = "".join(ch for ch in name if ch.isalnum() or ch == ' ').strip().replace(' ', '_')
+    filename  = "Invoice_" + inv_no.replace('/', '_') + "_" + safe + ".pdf"
 
-    c = rl_canvas.Canvas(filepath, pagesize=A4)
+    # Write to memory buffer; optionally also save to disk
+    pdf_buffer = _io.BytesIO()
+    c = rl_canvas.Canvas(pdf_buffer, pagesize=A4)
     W, H = A4
     LM = 15 * mm
     RM = W - 15 * mm
@@ -290,4 +292,16 @@ def generate_invoice(
     )
 
     c.save()
+    pdf_bytes = pdf_buffer.getvalue()
+
+    if return_bytes:
+        return pdf_bytes, filename, inv_no
+
+    # Save to disk (for single-invoice download and CLI use)
+    if output_dir is None:
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'invoices')
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, filename)
+    with open(filepath, 'wb') as f:
+        f.write(pdf_bytes)
     return filepath, inv_no
