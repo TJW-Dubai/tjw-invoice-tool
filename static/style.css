@@ -1,3 +1,74 @@
+/* ── Wake-up splash ───────────────────────────────────────── */
+#wakeSplash {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #F4F6F9;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.4s ease;
+}
+#wakeSplash.wake-done { opacity: 0; pointer-events: none; }
+
+.wake-box {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  padding: 48px 52px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+}
+.wake-logo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1B3A5C;
+  margin-bottom: 28px;
+}
+.wake-spinner {
+  width: 44px; height: 44px;
+  border: 4px solid #DDE3EC;
+  border-top-color: #1B3A5C;
+  border-radius: 50%;
+  animation: wakeSpin 0.85s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes wakeSpin { to { transform: rotate(360deg); } }
+
+.wake-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1A202C;
+  margin-bottom: 10px;
+}
+.wake-msg {
+  font-size: 0.9rem;
+  color: #6B7280;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.wake-msg strong { color: #1A202C; }
+
+.wake-bar-wrap {
+  background: #DDE3EC;
+  border-radius: 99px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.wake-bar {
+  height: 100%;
+  width: 0%;
+  background: #1B3A5C;
+  border-radius: 99px;
+  transition: width 1s linear;
+}
+.wake-counter {
+  font-size: 0.82rem;
+  color: #6B7280;
+  min-height: 1.2em;
+  transition: color 0.3s;
+}
+
 /* ── Reset & base ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

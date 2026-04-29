@@ -8,6 +8,21 @@
 </head>
 <body>
 
+  <!-- Wake-up splash screen — shown instantly, hidden once page fully loads -->
+  <div id="wakeSplash">
+    <div class="wake-box">
+      <div class="wake-logo">The Job Workshop</div>
+      <div class="wake-spinner"></div>
+      <div class="wake-title">Starting up…</div>
+      <div class="wake-msg">
+        The app is waking up from sleep.<br>
+        This takes <strong>up to 30 seconds</strong> — please wait.
+      </div>
+      <div class="wake-bar-wrap"><div class="wake-bar" id="wakeBar"></div></div>
+      <div class="wake-counter" id="wakeCounter">Please wait…</div>
+    </div>
+  </div>
+
   <header class="site-header">
     <div class="container header-inner">
       <div class="brand">
@@ -40,5 +55,49 @@
   </footer>
 
   {% block scripts %}{% endblock %}
+
+  <script>
+    // Show splash only if page took > 1.5 s to load (i.e. server was sleeping)
+    const _start = Date.now();
+
+    function _hideSplash() {
+      const splash = document.getElementById('wakeSplash');
+      splash.classList.add('wake-done');
+      setTimeout(() => splash.remove(), 400);
+    }
+
+    window.addEventListener('load', function () {
+      const elapsed = Date.now() - _start;
+      if (elapsed < 1500) {
+        // Page loaded fast — server was already awake, hide immediately
+        _hideSplash();
+        return;
+      }
+      // Page loaded slowly — server just woke up, show "Ready!" then fade
+      const counter = document.getElementById('wakeCounter');
+      const bar     = document.getElementById('wakeBar');
+      bar.style.width = '100%';
+      counter.textContent = 'Ready! Loading your page…';
+      counter.style.color = '#22c55e';
+      setTimeout(_hideSplash, 800);
+    });
+
+    // Progress bar + countdown (runs while page is loading)
+    let _secs = 0;
+    const _MAX = 35;
+    const _ticker = setInterval(function () {
+      _secs++;
+      const pct = Math.min((_secs / _MAX) * 100, 95);
+      document.getElementById('wakeBar').style.width = pct + '%';
+      const remaining = Math.max(_MAX - _secs, 1);
+      const counter = document.getElementById('wakeCounter');
+      if (_secs < _MAX) {
+        counter.textContent = 'Waking up… about ' + remaining + ' second' + (remaining === 1 ? '' : 's') + ' left';
+      } else {
+        counter.textContent = 'Almost there…';
+      }
+      if (_secs >= _MAX + 10) clearInterval(_ticker);
+    }, 1000);
+  </script>
 </body>
 </html>
