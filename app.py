@@ -127,11 +127,14 @@ def bulk_upload():
             try:
                 name    = row.get('Name', '').strip()
                 email   = row.get('Email', '').strip()
-                program = int(row.get('Program', '').strip())
-                amount  = float(row.get('Amount', '').replace(',', '').strip())
+                prog_raw = row.get('Program', '').strip()
+                program  = int(prog_raw) if prog_raw else 1
+                amount   = _parse_float(row.get('Amount', ''))
 
-                if not name or not email or amount <= 0:
-                    raise ValueError("Name, Email, and Amount are required.")
+                if not name or not email:
+                    raise ValueError("Name and Email are required.")
+                if amount is None or amount <= 0:
+                    raise ValueError("Amount is required and must be a positive number.")
 
                 balance_due    = row.get('Balance Due', '').strip() or 'NA'
                 terms          = row.get('Terms', '').strip() or 'NA'
