@@ -11,6 +11,7 @@ SENDER = "athejobworkshop@gmail.com"
 PROGRAM_NAMES = {
     1: "Five Modules Advisory Program (Interview Assurance Program)",
     2: "Comprehensive End to End Job Search Management and Advisory",
+    3: "TJW 2 Day Extensive Bootcamp",
 }
 
 

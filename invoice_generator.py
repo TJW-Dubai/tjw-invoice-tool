@@ -32,6 +32,7 @@ PROGRAMS = {
     1: "Five Modules Advisory Program (Interview Assurance Program)",
     2: ("Comprehensive End to End Job Search Management and Advisory "
         "(LinkedIn Management, Engagement, Applications and Outreach)"),
+    3: "TJW 2 Day Extensive Bootcamp",
 }
 
 NAVY        = colors.HexColor('#1B3A5C')

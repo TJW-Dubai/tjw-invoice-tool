@@ -33,13 +33,14 @@ def main() -> None:
     print("  1. Five Modules Advisory Program (Interview Assurance Program)")
     print("  2. Comprehensive End to End Job Search Management and Advisory")
     print("     (LinkedIn Management, Engagement, Applications and Outreach)")
+    print("  3. TJW 2 Day Extensive Bootcamp")
 
     while True:
-        choice = prompt("\nSelect Program (1 or 2)")
-        if choice in ('1', '2'):
+        choice = prompt("\nSelect Program (1, 2 or 3)")
+        if choice in ('1', '2', '3'):
             program = int(choice)
             break
-        print("  Please enter 1 or 2.")
+        print("  Please enter 1, 2 or 3.")
 
     while True:
         raw = prompt("Amount (AED)")
